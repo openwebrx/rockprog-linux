@@ -201,31 +201,31 @@ int main (int argc, char *argv[])
 
     poptFreeContext( optCon );
 
-	/* libusb initialisieren */
+    /* libusb initialisieren */
     if (libusb_init (&usb_context) != 0)
     {
-		printf ("libusb_init ging daneben :-(\n");
-		return 1;
+        printf ("libusb_init ging daneben :-(\n");
+        return 1;
     }
-	
-	/* FiFi-SDR suchen und öffnen */
-	if( such_fifi() )
-	{
-		ok = true;
 
-		/* ABPF? */
-		if (cmdline_abpf)
-		{
-			/* Beim Schreiben Werte prüfen */
-			if (cmdline_write)
-			{
-				if ((cmdline_index < 0) || (cmdline_freq < 0.0))
-				{
-					ok = false;
-				}
-			}
-			else
-			{
+    /* FiFi-SDR suchen und öffnen */
+    if (such_fifi())
+    {
+        ok = true;
+
+        /* ABPF? */
+        if (cmdline_abpf)
+        {
+            /* Beim Schreiben Werte prüfen */
+            if (cmdline_write)
+            {
+                if ((cmdline_index < 0) || (cmdline_freq < 0.0))
+                {
+                    ok = false;
+                }
+            }
+            else
+            {
 				/* Index und Frequenz haben feste Werte */
 				cmdline_index = 255;
 				cmdline_freq = 0.0;
@@ -233,7 +233,7 @@ int main (int argc, char *argv[])
 
 			if (ok)
 			{
-				if (softrock_get_set_abpf (fifisdr, cmdline_index, _11_5(cmdline_freq)))
+				if (softrock_get_set_abpf (fifisdr, cmdline_index, _11_5(4.0 * cmdline_freq)))
 				{
 					/* Aktuelle Werte zeigen */
 					softrock_show_abpf();
@@ -357,19 +357,19 @@ int main (int argc, char *argv[])
 					else
 					{
 						printf ("--mode nicht in [0,3]\n");
-					}
-				}
-				else
-				{
-					if ((cmdline_index == -1) ||
-				         (cmdline_freq_from < 0.0) ||
-				         (cmdline_freq_to < 0.0) ||
-				         (cmdline_pattern == -1))
-					{
-						printf ("--freq-from/--freq-to/--pattern prüfen\n");
-					}
-					else
-					{
+                    }
+                }
+                else
+                {
+                    if ((cmdline_index == -1) ||
+                        (cmdline_freq_from < 0.0) ||
+                        (cmdline_freq_to < 0.0) ||
+                        (cmdline_pattern == -1))
+                    {
+                        printf ("--freq-from/--freq-to/--pattern prüfen\n");
+                    }
+                    else
+                    {
 						softrock_write_presel_entry (fifisdr,
 							                         cmdline_index,
 					    		                     cmdline_freq_from,

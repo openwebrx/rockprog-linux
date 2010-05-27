@@ -75,7 +75,7 @@ void softrock_show_abpf (void)
             num_abpf);
     for (i = 0; i < num_abpf; i++)
     {
-        printf ("%2d: %lf MHz\n", i, (double)(abpf[i] / 32.0));
+        printf ("%2d: %lf MHz\n", i, (double)(abpf[i] / (4.0 * 32.0)));
     }
 }
 
@@ -411,8 +411,8 @@ bool softrock_read_presel_entry (struct libusb_device_handle *sdr,
         return false;
     }
 
-    *freq1 = *((uint32_t *)&response[0]) / (32.0 * 256.0 * 256.0);
-    *freq2 = *((uint32_t *)&response[4]) / (32.0 * 256.0 * 256.0);
+    *freq1 = *((uint32_t *)&response[0]) / (4.0 * 32.0 * 256.0 * 256.0);
+    *freq2 = *((uint32_t *)&response[4]) / (4.0 * 32.0 * 256.0 * 256.0);
     *pattern = response[8];
 
     return true;
@@ -428,8 +428,8 @@ bool softrock_write_presel_entry (struct libusb_device_handle *sdr,
     uint8_t message[9];
 
 
-    *((uint32_t *)&message[0]) = _11_21(freq1);
-    *((uint32_t *)&message[4]) = _11_21(freq2);
+    *((uint32_t *)&message[0]) = _11_21(4.0 * freq1);
+    *((uint32_t *)&message[4]) = _11_21(4.0 * freq2);
     message[8] = pattern;
 
     error = libusb_control_transfer(
