@@ -4,8 +4,8 @@
 
 #include <stdbool.h>
 
-	/* Bibliotheken */
-#include <libusb-1.0/libusb.h>				/* libusb 1.0 */
+    /* Bibliotheken */
+#include <libusb-1.0/libusb.h>      /* libusb 1.0 */
 
 
 #define  _11_5(double_freq) (uint32_t)(double_freq*(1<<5))
