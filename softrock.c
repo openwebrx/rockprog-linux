@@ -453,4 +453,35 @@ bool softrock_write_presel_entry (struct libusb_device_handle *sdr,
 }
 
 
+/* I2C-Adresse lesen */
+bool softrock_read_i2c (struct libusb_device_handle *sdr, uint8_t *address)
+{
+    int error;
+    uint8_t addr;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0x41, /* Get/Set I2C address */
+        0, /* wValue = 0 --> Nur lesen! */
+        0, /* wIndex */
+        (unsigned char *)&addr,
+        1, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    *address = addr;
+
+    return true;
+}
+
+
+
 

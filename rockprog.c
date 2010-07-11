@@ -32,6 +32,7 @@ int cmdline_xtal = false;
 int cmdline_3rd = false;
 int cmdline_5th = false;
 int cmdline_presel = false;
+int cmdline_i2c = false;
 long cmdline_pattern = -1;
 long cmdline_mode = -1;
 double cmdline_freq_from = -999.0;
@@ -165,6 +166,8 @@ int main (int argc, char *argv[])
                 "Startfrequenz [MHz]" },
         { "freq-to", '\0', POPT_ARG_DOUBLE, &cmdline_freq_to, 0,
                 "Endfrequenz [MHz]" },
+        { "i2c", '\0', POPT_ARG_NONE, &cmdline_i2c, 0,
+                "I2C-Adresse lesen" },
 #if 0
         { "outdir", 'o', POPT_ARG_STRING, &cmdline_outdir, 0,
                 "Verzeichnis für die Ausgabe der Karten" },
@@ -402,6 +405,24 @@ int main (int argc, char *argv[])
                                       pattern & 0x0F
                                       );
                     }
+                }
+            }
+        }
+
+        /* I2C-Adresse */
+        if (cmdline_i2c)
+        {
+            /* Schreiben nicht unterstützt */
+            if (cmdline_write)
+            {
+                printf ("Schreiben der I2C-Adresse nicht möglich (wird automatisch bestimmt).\n");
+            }
+            else
+            {
+                uint8_t addr;
+                if (softrock_read_i2c (fifisdr, &addr))
+                {
+                    printf ("I2C-Adresse = 0x%02X\n", (int)addr);
                 }
             }
         }
