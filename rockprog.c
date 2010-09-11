@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <math.h>
 
     /* Bibliotheken */
 #include <libusb-1.0/libusb.h>
@@ -35,6 +36,8 @@ int cmdline_presel = false;
 int cmdline_i2c = false;
 long cmdline_pattern = -1;
 long cmdline_mode = -1;
+int cmdline_regs = false;
+int cmdline_vregs = false;
 double cmdline_freq_from = -999.0;
 double cmdline_freq_to = -999.0;
 /*
@@ -55,6 +58,9 @@ void print_usb_error (int error)
     break;
     case LIBUSB_ERROR_TIMEOUT:
         printf ("libusb: Timeout\n");
+    break;
+    case LIBUSB_ERROR_PIPE:
+        printf ("libusb: 'Pipe Error'\n");
     break;
     case LIBUSB_ERROR_NO_MEM:
         printf ("libusb: Kein Speicher\n");
@@ -168,6 +174,10 @@ int main (int argc, char *argv[])
                 "Endfrequenz [MHz]" },
         { "i2c", '\0', POPT_ARG_NONE, &cmdline_i2c, 0,
                 "I2C-Adresse lesen" },
+        { "regs", '\0', POPT_ARG_NONE, &cmdline_regs, 0,
+                "Si570-Register" },
+        { "vregs", '\0', POPT_ARG_NONE, &cmdline_vregs, 0,
+                "Virtuelle Si570-Register" },
 #if 0
         { "outdir", 'o', POPT_ARG_STRING, &cmdline_outdir, 0,
                 "Verzeichnis für die Ausgabe der Karten" },
@@ -423,6 +433,63 @@ int main (int argc, char *argv[])
                 if (softrock_read_i2c (fifisdr, &addr))
                 {
                     printf ("I2C-Adresse = 0x%02X\n", (int)addr);
+                }
+            }
+        }
+
+        /* Si570-Register lesen/schreiben */
+        if (cmdline_regs || cmdline_vregs)
+        {
+            /* Beim Schreiben Werte prüfen */
+            if (cmdline_write)
+            {
+                printf ("Noch nicht unterstützt\n");
+            }
+            else
+            {
+                uint8_t regs[6];
+                bool result = false;;
+
+                if (cmdline_regs)
+                {
+                    result = softrock_read_registers (fifisdr, regs);
+                }
+                if (cmdline_vregs)
+                {
+                    result = softrock_read_virtual_registers (fifisdr, regs);
+                }
+                if (result)
+                {
+                    /* Felder HS_DIV, N1 und RFREQ rausziehen */
+                    uint32_t hs_div;
+                    uint32_t n1;
+                    uint32_t rfreq_int;
+                    uint32_t rfreq_frac;
+                    double rfreq;
+
+                    /* HS_DIV im Register */
+                    hs_div = (regs[0] >> 5) & 7;
+                    /* Effektiver Wert */
+                    hs_div += 4;
+
+                    /* N1 im Register */
+                    n1 = ((regs[0] & 0x1F) << 2) | ((regs[1] >> 6) & 3);
+                    /* Effektiver Wert */
+                    n1 += 1;
+
+                    rfreq_int = regs[1] & 0x3F;
+                    rfreq_int = (rfreq_int << 4) | ((regs[2] >> 4) & 0x0F);
+                    rfreq_frac = regs[2] & 0x0F;
+                    rfreq_frac = (rfreq_frac << 8) | regs[3];
+                    rfreq_frac = (rfreq_frac << 8) | regs[4];
+                    rfreq_frac = (rfreq_frac << 8) | regs[5];
+                    rfreq = (double)rfreq_int + (double)rfreq_frac / pow(2,28);
+
+                    printf ("Si570-Register 7-12: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X"
+                            ", HS_DIV=%d, N1=%d, RFREQ=%0.9lf%s\n",
+                             regs[0], regs[1], regs[2], regs[3], regs[4], regs[5],
+                             hs_div, n1, rfreq,
+                             cmdline_vregs ? " (virtuell)" : "");
                 }
             }
         }

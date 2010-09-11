@@ -484,4 +484,60 @@ bool softrock_read_i2c (struct libusb_device_handle *sdr, uint8_t *address)
 
 
 
+/* Si570-Register lesen */
+bool softrock_read_registers (struct libusb_device_handle *sdr, uint8_t value[6])
+{
+    int error;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0xAB, /* FiFi-SDR Extra-Befehle (lesen) */
+        0, /* wValue */
+        10, /* wIndex = 10 --> Virtuelle Register */
+        (unsigned char *)&value[0],
+        6, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+
+
+/* Virtuelle Si570-Register lesen */
+bool softrock_read_virtual_registers (struct libusb_device_handle *sdr, uint8_t value[6])
+{
+    int error;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0x3F, /* Get/Set I2C address */
+        0, /* wValue = 0 --> Nur lesen! */
+        0, /* wIndex */
+        (unsigned char *)&value[0],
+        6, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+
+
+
+
 
