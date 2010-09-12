@@ -506,10 +506,31 @@ int main (int argc, char *argv[])
                     rfreq_frac = (rfreq_frac << 8) | regs[5];
                     rfreq = (double)rfreq_int + (double)rfreq_frac / pow(2,28);
 
+                    /* Mit Quarzfrequenz kann noch die echte RX-Frequenz bestimmt werden.
+                     * Auch der virtuelle VCO-Faktor wird ggf. benötigt.
+                     */
+                    double rxfreq = 0.0;
+                    double xtal;
+                    long factor;
+                    if (softrock_read_xtal (fifisdr, &xtal))
+                    {
+                        if (cmdline_vregs)
+                        {
+                            if (softrock_read_virtual_vco_factor (fifisdr, &factor))
+                            {
+                                rxfreq = ((rfreq * xtal) / (hs_div * n1)) / factor;
+                            }
+                        }
+                        else
+                        {
+                            rxfreq = ((rfreq * xtal) / (hs_div * n1)) / 4.0;
+                        }
+                    }
+
                     printf ("Si570-Register 7-12: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X"
-                            ", HS_DIV=%d, N1=%d, RFREQ=%0.9lf%s\n",
+                            ", HS_DIV=%d, N1=%d, RFREQ=%0.9lf (%lf MHz)%s\n",
                              regs[0], regs[1], regs[2], regs[3], regs[4], regs[5],
-                             hs_div, n1, rfreq,
+                             hs_div, n1, rfreq, rxfreq,
                              cmdline_vregs ? " (virtuell)" : "");
                 }
             }
