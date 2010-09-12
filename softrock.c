@@ -620,3 +620,64 @@ bool softrock_write_virtual_vco_factor (struct libusb_device_handle *sdr, long f
     return true;
 }
 
+
+/* Startup-Frequenz schreiben */
+bool softrock_write_startup (struct libusb_device_handle *sdr, double freq)
+{
+    int error;
+    uint32_t freq1121;
+
+
+    freq1121 = _11_21(4.0 * freq);
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0x34, /* Set startup frequency */
+        0, /* wValue */
+        0, /* wIndex */
+        (unsigned char *)&freq1121,
+        4, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+
+
+/* Startup-Frequenz lesen */
+bool softrock_read_startup (struct libusb_device_handle *sdr, double *freq)
+{
+    int error;
+    uint32_t freq1121;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0x3C, /* Get startup frequency */
+        0, /* wValue */
+        0, /* wIndex */
+        (unsigned char *)&freq1121,
+        4, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    *freq = freq1121 / (4.0 * 2097152.0);
+
+    return true;
+}
+
+

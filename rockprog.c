@@ -43,6 +43,7 @@ double cmdline_freq_from = -999.0;
 double cmdline_freq_to = -999.0;
 int cmdline_virtual_vco_factor = false;
 long cmdline_factor = -1;
+int cmdline_startup = false;
 
 
 
@@ -184,6 +185,8 @@ int main (int argc, char *argv[])
                 "Faktor für virtuellen VCO" },
         { "factor", '\0', POPT_ARG_LONG, &cmdline_factor, 0,
                 "Faktor (zusammen mit --vfact)" },
+        { "startup", '\0', POPT_ARG_NONE, &cmdline_startup, 0,
+                "Startup-Frequenz" },
         POPT_AUTOHELP
         { NULL, POPT_ARG_NONE, 0, NULL, 0 }
     };
@@ -557,6 +560,31 @@ int main (int argc, char *argv[])
                 if (softrock_read_virtual_vco_factor (fifisdr, &factor))
                 {
                     printf ("Faktor für virtuellen VCO = %ld\n", factor);
+                }
+            }
+        }
+
+        /* Startup-Frequenz */
+        if (cmdline_startup)
+        {
+            /* Beim Schreiben Werte prüfen */
+            if (cmdline_write)
+            {
+                if (cmdline_freq < 0.0)
+                {
+                    printf ("Keine Frequenz angegeben\n");
+                }
+                else
+                {
+                    softrock_write_startup (fifisdr, cmdline_freq);
+                }
+            }
+            else
+            {
+                double f;
+                if (softrock_read_startup (fifisdr, &f))
+                {
+                    printf ("Startup-Frequenz = %lf MHz\n", f);
                 }
             }
         }

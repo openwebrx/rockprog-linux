@@ -38,5 +38,7 @@ bool softrock_read_virtual_registers (struct libusb_device_handle *sdr, uint8_t 
 bool softrock_write_virtual_registers (struct libusb_device_handle *sdr, uint8_t value[6]);
 bool softrock_read_virtual_vco_factor (struct libusb_device_handle *sdr, long *factor);
 bool softrock_write_virtual_vco_factor (struct libusb_device_handle *sdr, long factor);
+bool softrock_read_startup (struct libusb_device_handle *sdr, double *freq);
+bool softrock_write_startup (struct libusb_device_handle *sdr, double freq);
 
 #endif
