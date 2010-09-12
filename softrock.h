@@ -35,5 +35,8 @@ bool softrock_write_presel_entry (struct libusb_device_handle *sdr,
 bool softrock_read_i2c (struct libusb_device_handle *sdr, uint8_t *address);
 bool softrock_read_registers (struct libusb_device_handle *sdr, uint8_t value[6]);
 bool softrock_read_virtual_registers (struct libusb_device_handle *sdr, uint8_t value[6]);
+bool softrock_write_virtual_registers (struct libusb_device_handle *sdr, uint8_t value[6]);
+bool softrock_read_virtual_vco_factor (struct libusb_device_handle *sdr, long *factor);
+bool softrock_write_virtual_vco_factor (struct libusb_device_handle *sdr, long factor);
 
 #endif

@@ -38,11 +38,11 @@ long cmdline_pattern = -1;
 long cmdline_mode = -1;
 int cmdline_regs = false;
 int cmdline_vregs = false;
+char *cmdline_regset = "";
 double cmdline_freq_from = -999.0;
 double cmdline_freq_to = -999.0;
-/*
-char *cmdline_outdir = "";
-*/
+int cmdline_virtual_vco_factor = false;
+long cmdline_factor = -1;
 
 
 
@@ -178,10 +178,12 @@ int main (int argc, char *argv[])
                 "Si570-Register" },
         { "vregs", '\0', POPT_ARG_NONE, &cmdline_vregs, 0,
                 "Virtuelle Si570-Register" },
-#if 0
-        { "outdir", 'o', POPT_ARG_STRING, &cmdline_outdir, 0,
-                "Verzeichnis für die Ausgabe der Karten" },
-#endif
+        { "regset", '\0', POPT_ARG_STRING, &cmdline_regset, 0,
+                "Register-Werte für Si570 (6 Hex-Werte mit Komma getrennt: 0xAB,0xCD,...)" },
+        { "vfact", '\0', POPT_ARG_NONE, &cmdline_virtual_vco_factor, 0,
+                "Faktor für virtuellen VCO" },
+        { "factor", '\0', POPT_ARG_LONG, &cmdline_factor, 0,
+                "Faktor (zusammen mit --vfact)" },
         POPT_AUTOHELP
         { NULL, POPT_ARG_NONE, 0, NULL, 0 }
     };
@@ -440,14 +442,33 @@ int main (int argc, char *argv[])
         /* Si570-Register lesen/schreiben */
         if (cmdline_regs || cmdline_vregs)
         {
+            uint8_t regs[6];
+
             /* Beim Schreiben Werte prüfen */
             if (cmdline_write)
             {
-                printf ("Noch nicht unterstützt\n");
+                int scanargs[6];
+
+                /* Register-Werte korrekt angegeben? */
+                if (6 != sscanf(cmdline_regset, "%x,%x,%x,%x,%x,%x",
+                    &scanargs[0], &scanargs[1], &scanargs[2], &scanargs[3], &scanargs[4], &scanargs[5]))
+                {
+                    printf ("--regset braucht 6 Register (hex, getrennt durch Komma)\n");
+                }
+                else
+                {
+                    regs[0] = scanargs[0];
+                    regs[1] = scanargs[1];
+                    regs[2] = scanargs[2];
+                    regs[3] = scanargs[3];
+                    regs[4] = scanargs[4];
+                    regs[5] = scanargs[5];
+
+                    softrock_write_virtual_registers (fifisdr, regs);
+                }
             }
             else
             {
-                uint8_t regs[6];
                 bool result = false;;
 
                 if (cmdline_regs)
@@ -490,6 +511,31 @@ int main (int argc, char *argv[])
                              regs[0], regs[1], regs[2], regs[3], regs[4], regs[5],
                              hs_div, n1, rfreq,
                              cmdline_vregs ? " (virtuell)" : "");
+                }
+            }
+        }
+
+        /* Faktor für virtuelle Register */
+        if (cmdline_virtual_vco_factor)
+        {
+            /* Beim Schreiben Werte prüfen */
+            if (cmdline_write)
+            {
+                if (cmdline_factor < 0)
+                {
+                    printf ("Kein Faktor angegeben (--factor)\n");
+                }
+                else
+                {
+                    softrock_write_virtual_vco_factor (fifisdr, cmdline_factor);
+                }
+            }
+            else
+            {
+                long factor;
+                if (softrock_read_virtual_vco_factor (fifisdr, &factor))
+                {
+                    printf ("Faktor für virtuellen VCO = %ld\n", factor);
                 }
             }
         }
