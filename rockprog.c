@@ -44,6 +44,9 @@ double cmdline_freq_to = -999.0;
 int cmdline_virtual_vco_factor = false;
 long cmdline_factor = -1;
 int cmdline_startup = false;
+int cmdline_smoothtune = false;
+long cmdline_ppm = -1;
+int cmdline_autotune = false;
 
 
 
@@ -187,6 +190,12 @@ int main (int argc, char *argv[])
                 "Faktor (zusammen mit --vfact)" },
         { "startup", '\0', POPT_ARG_NONE, &cmdline_startup, 0,
                 "Startup-Frequenz" },
+        { "smooth", '\0', POPT_ARG_NONE, &cmdline_smoothtune, 0,
+                "Smooth Tune" },
+        { "ppm", '\0', POPT_ARG_LONG, &cmdline_ppm, 0,
+                "ppm-Wert (für --smooth)" },
+        { "autotune", '\0', POPT_ARG_NONE, &cmdline_autotune, 0,
+                "Qurzfrequenz automatisch abgleichen" },
         POPT_AUTOHELP
         { NULL, POPT_ARG_NONE, 0, NULL, 0 }
     };
@@ -585,6 +594,88 @@ int main (int argc, char *argv[])
                 if (softrock_read_startup (fifisdr, &f))
                 {
                     printf ("Startup-Frequenz = %lf MHz\n", f);
+                }
+            }
+        }
+
+        /* Smooth Tune */
+        if (cmdline_smoothtune)
+        {
+            uint16_t ppm;
+
+            /* Beim Schreiben Werte prüfen */
+            if (cmdline_write)
+            {
+                if (cmdline_ppm < 0)
+                {
+                    printf ("Kein ppm-Wert angegeben\n");
+                }
+                else
+                {
+                    ppm = cmdline_ppm;
+                    softrock_write_smoothtune (fifisdr, ppm);
+                }
+            }
+            else
+            {
+                if (softrock_read_smoothtune (fifisdr, &ppm))
+                {
+                    printf ("Smooth Tune = %d ppm\n", (int)ppm);
+                }
+            }
+        }
+
+        /* Autotune für Quarzfrequenz */
+        if (cmdline_autotune) {
+            uint8_t regs[6];
+            bool result = false;;
+
+            /* Factory defaults lesen */
+            result = softrock_read_factory_default_registers (fifisdr, regs);
+
+            if (result) {
+                /* Felder HS_DIV, N1 und RFREQ rausziehen */
+                uint32_t hs_div;
+                uint32_t n1;
+                uint32_t rfreq_int;
+                uint32_t rfreq_frac;
+                double rfreq;
+
+                /* HS_DIV im Register */
+                hs_div = (regs[0] >> 5) & 7;
+                /* Effektiver Wert */
+                hs_div += 4;
+
+                /* N1 im Register */
+                n1 = ((regs[0] & 0x1F) << 2) | ((regs[1] >> 6) & 3);
+                /* Effektiver Wert */
+                n1 += 1;
+
+                rfreq_int = regs[1] & 0x3F;
+                rfreq_int = (rfreq_int << 4) | ((regs[2] >> 4) & 0x0F);
+                rfreq_frac = regs[2] & 0x0F;
+                rfreq_frac = (rfreq_frac << 8) | regs[3];
+                rfreq_frac = (rfreq_frac << 8) | regs[4];
+                rfreq_frac = (rfreq_frac << 8) | regs[5];
+                rfreq = (double)rfreq_int + (double)rfreq_frac / pow(2,28);
+
+                /* Mit Quarzfrequenz kann noch die echte RX-Frequenz bestimmt werden. */
+                double rxfreq = 0.0;
+                double xtal = 114.285;  /* Mit nomineller Quarzfrequenz rechnen! */
+                rxfreq = ((rfreq * xtal) / (hs_div * n1)) / 4.0;
+
+                /* Annahme: Startup-Frequenz ist im Raster 5 kHz.
+                 * Abweichung von rxfreq zu diesem Raster bestimmen. Daraus Korrekturfaktor für XTAL ableiten.
+                 */
+                double rasterfreq = (double)((uint32_t)((rxfreq + 0.0025) / 0.005)) * 0.005;
+                double newxtal = xtal * (rasterfreq / rxfreq);
+
+                if (cmdline_write) {
+                    softrock_write_xtal (fifisdr, newxtal);
+                }
+                else {
+                    printf ("Factory-Startup: %lf MHz, Vorschlag: XTAL=%lf\n",
+                             rxfreq, newxtal);
                 }
             }
         }

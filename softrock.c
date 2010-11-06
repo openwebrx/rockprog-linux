@@ -520,7 +520,7 @@ bool softrock_read_virtual_registers (struct libusb_device_handle *sdr, uint8_t 
     error = libusb_control_transfer(
         sdr,
         LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-        0x3F, /* Get/Set I2C address */
+        0x3F, /* Read Si570 registers */
         0, /* wValue = 0 --> Nur lesen! */
         0, /* wIndex */
         (unsigned char *)&value[0],
@@ -679,5 +679,88 @@ bool softrock_read_startup (struct libusb_device_handle *sdr, double *freq)
 
     return true;
 }
+
+
+
+/* "Smooth-Tune" lesen */
+bool softrock_read_smoothtune (struct libusb_device_handle *sdr, uint16_t *smoothtune)
+{
+    int error;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0x3B, /* Get smooth tune */
+        0, /* wValue */
+        0, /* wIndex */
+        (unsigned char *)smoothtune,
+        2, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+
+
+/* "Smooth-Tune" schreiben */
+bool softrock_write_smoothtune (struct libusb_device_handle *sdr, uint16_t smoothtune)
+{
+    int error;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0x35, /* Set startup frequency */
+        0, /* wValue */
+        0, /* wIndex */
+        (unsigned char *)&smoothtune,
+        2, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+
+
+/* Factory Default Si570-Register lesen */
+bool softrock_read_factory_default_registers (struct libusb_device_handle *sdr, uint8_t value[6])
+{
+    int error;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0xAB, /* FiFi-SDR Extra-Befehle (lesen) */
+        0, /* wValue */
+        12, /* wIndex = 12 --> Factory Defaults */
+        (unsigned char *)&value[0],
+        6, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+
 
 
