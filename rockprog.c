@@ -422,10 +422,10 @@ int main (int argc, char *argv[])
                     {
                         printf ("%2d: %10lf - %10lf MHz, Ausgänge = %c%c%c%cb (%d)\n",
                                       i, f1, f2,
-                                      pattern & 1 ? '1' : '0',
-                                      pattern & 2 ? '1' : '0',
-                                      pattern & 4 ? '1' : '0',
                                       pattern & 8 ? '1' : '0',
+                                      pattern & 4 ? '1' : '0',
+                                      pattern & 2 ? '1' : '0',
+                                      pattern & 1 ? '1' : '0',
                                       pattern & 0x0F
                                       );
                     }
@@ -666,8 +666,12 @@ int main (int argc, char *argv[])
 
                 /* Annahme: Startup-Frequenz ist im Raster 5 kHz.
                  * Abweichung von rxfreq zu diesem Raster bestimmen. Daraus Korrekturfaktor für XTAL ableiten.
+                 * (Per Kommandozeile kann geratene Sollfrequenz überschrieben werden).
                  */
                 double rasterfreq = (double)((uint32_t)((rxfreq + 0.0025) / 0.005)) * 0.005;
+                if (cmdline_freq >= 0.0) {
+                    rasterfreq = cmdline_freq;
+                }
                 double newxtal = xtal * (rasterfreq / rxfreq);
 
                 if (cmdline_write) {
