@@ -878,3 +878,29 @@ bool softrock_write_volume (struct libusb_device_handle *sdr, int16_t volume)
 
 
 
+/* Betriebsart des Demodulators setzen */
+bool softrock_write_demodulator_mode (struct libusb_device_handle *sdr, uint8_t mode)
+{
+    int error;
+
+
+    error = libusb_control_transfer(
+        sdr,
+        LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+        0xAC, /* FiFi-SDR Extra-Befehle (schreiben) */
+        0, /* wValue */
+        15, /* wIndex = 13 --> Mode schreiben */
+        (unsigned char *)&mode,
+        1, /* wLength */
+        100 /* timeout */
+        );
+
+    if (error < 0)
+    {
+        print_usb_error (error);
+        return false;
+    }
+
+    return true;
+}
+

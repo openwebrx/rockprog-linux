@@ -49,7 +49,7 @@ long cmdline_factor = -1;
 int cmdline_startup = false;
 int cmdline_version = false;
 #if __linux__
-const char rockprog_version[] = "250 29.12.2010";   // Datum als Versionsnummer
+const char rockprog_version[] = "260 02.01.2011";   // Datum als Versionsnummer
 #else
 const char rockprog_version[] = "250/250 29.12.2010";   // Datum als Versionsnummer
 #endif
@@ -59,6 +59,8 @@ int cmdline_autotune = false;
 int cmdline_firmware = false;
 int cmdline_debuginfo = false;
 long cmdline_volume = -1;
+int cmdline_demod = false;
+char *cmdline_demodmode = "";
 
 
 
@@ -233,6 +235,10 @@ int main (int argc, char *argv[])
                 "Einige Debug-Werte auslesen" },
         { "volume", '\0', POPT_ARG_LONG, &cmdline_volume, 0,
                 "Volume (0 oder 1)" },
+        { "demod", '\0', POPT_ARG_NONE, &cmdline_demod, 0,
+                "Demodulator" },
+        { "demodmode", '\0', POPT_ARG_STRING, &cmdline_demodmode, 0,
+                "Demodulator-Modus (LSB, USB, AM)" },
         POPT_AUTOHELP
         { NULL, POPT_ARG_NONE, 0, NULL, 0 }
     };
@@ -771,6 +777,31 @@ int main (int argc, char *argv[])
 				printf("Volume kann nur geschrieben werden\n!");
 			}
         }
+ 
+        /* Demodulator-Mode setzen */
+		if (cmdline_demod) {
+			int demodMode = -1;
+
+			if (!strcmp(cmdline_demodmode, "lsb") || !strcmp(cmdline_demodmode, "LSB")) {
+				demodMode = 0;
+			}
+			if (!strcmp(cmdline_demodmode, "usb") || !strcmp(cmdline_demodmode, "USB")) {
+				demodMode = 1;
+			}
+			if (!strcmp(cmdline_demodmode, "am") || !strcmp(cmdline_demodmode, "AM")) {
+				demodMode = 2;
+			}
+
+			if (cmdline_write) {
+				if (demodMode < 0) {
+					printf("Kein Modus (\"LSB\", \"USB\", \"AM\") angegeben\n");
+				}
+	        	softrock_write_demodulator_mode(fifisdr, demodMode);
+			}
+			else {
+				;
+			}
+		}
  
     	libusb_close (fifisdr);
     }
