@@ -47,6 +47,11 @@ bool softrock_read_version_number (struct libusb_device_handle *sdr, uint32_t *s
 bool softrock_read_version_string (struct libusb_device_handle *sdr, char *version, uint32_t length);
 bool softrock_read_debuginfo (struct libusb_device_handle *sdr, uint8_t *debuginfo, uint32_t length);
 bool softrock_write_volume (struct libusb_device_handle *sdr, int16_t volume);
+bool softrock_read_demodulator_mode (struct libusb_device_handle *sdr, uint8_t *mode);
 bool softrock_write_demodulator_mode (struct libusb_device_handle *sdr, uint8_t mode);
+bool softrock_read_subtract_multiply (struct libusb_device_handle *sdr, int32_t *subtract1121, uint32_t *multiply1121);
+bool softrock_write_subtract_multiply (struct libusb_device_handle *sdr, int32_t subtract1121, uint32_t multiply1121);
+bool softrock_read_bandwidth (struct libusb_device_handle *sdr, uint32_t *bandwidth);
+bool softrock_write_bandwidth (struct libusb_device_handle *sdr, uint32_t bandwidth);
 
 #endif

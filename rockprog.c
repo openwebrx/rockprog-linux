@@ -61,6 +61,10 @@ int cmdline_debuginfo = false;
 long cmdline_volume = -1;
 int cmdline_demod = false;
 char *cmdline_demodmode = "";
+double cmdline_subtract = -999.0;
+double cmdline_multiply = -999.0;
+int cmdline_offset = false;
+int cmdline_bandwidth = false;
 
 
 
@@ -239,6 +243,14 @@ int main (int argc, char *argv[])
                 "Demodulator" },
         { "demodmode", '\0', POPT_ARG_STRING, &cmdline_demodmode, 0,
                 "Demodulator-Modus (LSB, USB, AM)" },
+        { "offset", '\0', POPT_ARG_NONE, &cmdline_offset, 0,
+                "Offset (mit --subtract und --multiply)" },
+        { "subtract", '\0', POPT_ARG_DOUBLE, &cmdline_subtract, 0,
+                "für --offset" },
+        { "multiply", '\0', POPT_ARG_DOUBLE, &cmdline_multiply, 0,
+                "für --offset" },
+        { "bandwidth", '\0', POPT_ARG_NONE, &cmdline_bandwidth, 0,
+                "Bandbreite Demodulator-Filter (mit --freq)" },
         POPT_AUTOHELP
         { NULL, POPT_ARG_NONE, 0, NULL, 0 }
     };
@@ -778,9 +790,9 @@ int main (int argc, char *argv[])
 			}
         }
  
-        /* Demodulator-Mode setzen */
+        /* Demodulator-Mode abfragen/setzen */
 		if (cmdline_demod) {
-			int demodMode = -1;
+			uint8_t demodMode = 255;
 
 			if (!strcmp(cmdline_demodmode, "lsb") || !strcmp(cmdline_demodmode, "LSB")) {
 				demodMode = 0;
@@ -793,17 +805,86 @@ int main (int argc, char *argv[])
 			}
 
 			if (cmdline_write) {
-				if (demodMode < 0) {
+				if (demodMode == 255) {
 					printf("Kein Modus (\"LSB\", \"USB\", \"AM\") angegeben\n");
 				}
 	        	softrock_write_demodulator_mode(fifisdr, demodMode);
 			}
 			else {
-				;
+	        	if (softrock_read_demodulator_mode(fifisdr, &demodMode)) {
+					char *modeName = "UNBEKANNT";
+					switch (demodMode) {
+						case 0: modeName = "LSB"; break;
+						case 1: modeName = "USB"; break;
+						case 2: modeName = "AM"; break;
+						case 3: modeName = "FM"; break;
+					}
+					printf("Demodulator: %s\n", modeName);
+				}
 			}
 		}
  
-    	libusb_close (fifisdr);
+        /* Offset abfragen/setzen */
+		if (cmdline_offset) {
+			int32_t subtract1121;
+			uint32_t multiply1121;
+
+			/* Zunächst aktuellen Stand lesen */
+            if (softrock_read_subtract_multiply(fifisdr, &subtract1121, &multiply1121)) {
+				if (cmdline_write) {
+					if ((cmdline_subtract >= -1.0) && (cmdline_subtract <= +1.0)) {
+						subtract1121 = (int32_t)(cmdline_subtract * (4.0 * 2097152.0));
+					}
+					if (cmdline_multiply >= 0.0) {
+						multiply1121 = (uint32_t)(cmdline_multiply * 2097152.0);
+					}
+		            softrock_write_subtract_multiply(fifisdr, subtract1121, multiply1121);
+				}
+				else {
+					double sub = subtract1121 / (4.0 * 2097152.0);
+					double mul = multiply1121 / 2097152.0;
+
+	                printf ("Subtract: %f MHz, Multiply: %f\n", sub, mul);
+				}
+            }
+		}
+
+        /* Demodulator-Bandbreite */
+        if (cmdline_bandwidth)
+        {
+            uint32_t freq;
+
+            /* Beim Schreiben Werte prüfen */
+            if (cmdline_write)
+            {
+                if (cmdline_freq < 0.0)
+                {
+                    printf ("Keine Frequenz (--freq in Hz) angegeben\n");
+                }
+                else
+                {
+                    freq = (uint32_t)cmdline_freq;
+                    if (softrock_write_bandwidth (fifisdr, freq)) {
+						uint32_t freq2;
+		                if (softrock_read_bandwidth (fifisdr, &freq2))
+		                {
+							if (freq != freq2) {
+								printf("Warnung: Bandbreite: %d Hz\n", freq2);
+							}
+						}
+					}
+                }
+            }
+            else
+            {
+                if (softrock_read_bandwidth (fifisdr, &freq))
+                {
+                    printf ("Bandbreite: %d Hz\n", freq);
+                }
+            }
+        }
+ 
+ 		libusb_close (fifisdr);
     }
     else
     {
