@@ -48,11 +48,7 @@ int cmdline_virtual_vco_factor = false;
 long cmdline_factor = -1;
 int cmdline_startup = false;
 int cmdline_version = false;
-#if __linux__
-const char rockprog_version[] = "260 02.01.2011";   // Datum als Versionsnummer
-#else
-const char rockprog_version[] = "250/250 29.12.2010";   // Datum als Versionsnummer
-#endif
+const char rockprog_version[] = "347 06.12.2011";   // Datum als Versionsnummer
 int cmdline_smoothtune = false;
 long cmdline_ppm = -1;
 int cmdline_autotune = false;
@@ -284,7 +280,7 @@ int main (int argc, char *argv[])
 
     if (cmdline_version)
     {
-        printf( "%s",rockprog_version);
+        printf( "%s\n",rockprog_version);
     }
 
     /* libusb initialisieren */
@@ -722,24 +718,43 @@ int main (int argc, char *argv[])
                 /* Mit Quarzfrequenz kann noch die echte RX-Frequenz bestimmt werden. */
                 double rxfreq = 0.0;
                 double xtal = 114.285;  /* Mit nomineller Quarzfrequenz rechnen! */
-                rxfreq = ((rfreq * xtal) / (hs_div * n1)) / 4.0;
+                rxfreq = ((rfreq * xtal) / (hs_div * n1));
 
-                /* Annahme: Startup-Frequenz ist im Raster 5 kHz.
+                /* Annahme: Startup-Frequenz ist im Raster 100 kHz.
                  * Abweichung von rxfreq zu diesem Raster bestimmen. Daraus Korrekturfaktor für XTAL ableiten.
                  * (Per Kommandozeile kann geratene Sollfrequenz überschrieben werden).
                  */
-                double rasterfreq = (double)((uint32_t)((rxfreq + 0.0025) / 0.005)) * 0.005;
+                double rasterfreq = (double)((uint32_t)((rxfreq + 0.05) / 0.1)) * 0.1;
                 if (cmdline_freq >= 0.0) {
                     rasterfreq = cmdline_freq;
                 }
                 double newxtal = xtal * (rasterfreq / rxfreq);
+                bool xtalInRange = (newxtal >= 113.0) && (newxtal <= 115.0);
+
+                /* Wenn jemand die RX-Frequenz angegeben hat, dann kann evtl. der Vierfache Wert zum Ziel führen. */
+                if (!xtalInRange) {
+                    if (cmdline_freq >= 0.0) {
+                        double newxtal4 = xtal * ((4.0 * rasterfreq) / rxfreq);
+                        xtalInRange = (newxtal4 >= 113.0) && (newxtal4 <= 115.0);
+                        if (xtalInRange) {
+                            rasterfreq = 4.0 * rasterfreq;
+                            newxtal = newxtal4;
+                        }
+                    }
+                }
 
                 if (cmdline_write) {
-                    softrock_write_xtal (fifisdr, newxtal);
+                    if (!xtalInRange) {
+                        printf("Unzulässiger XTAL-Wert (%f MHz) NICHT geschrieben. (113 MHz <= XTAL <= 115 MHz)\n",
+                               newxtal);
+                    }
+                    else {
+                        softrock_write_xtal (fifisdr, newxtal);
+                    }
                 }
                 else {
-                    printf ("Factory-Startup: %f MHz, Vorschlag: XTAL=%f\n",
-                             rxfreq, newxtal);
+                    printf("Factory-Startup: %f MHz (soll: %f MHz), Vorschlag: XTAL=%f\n",
+                           rxfreq, rasterfreq, newxtal);
                 }
             }
         }
