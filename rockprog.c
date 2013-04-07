@@ -257,26 +257,23 @@ int main (int argc, char *argv[])
     poptSetOtherOptionHelp( optCon, " [options]" );
 
     /* Kurz-Hilfe, wenn gar keine Argumente angegeben werden. */
-    if (argc < 2)
-    {
+    if (argc < 2) {
         poptPrintUsage( optCon, stderr, 0 );
         return 1;
     }
 
     /* Optionskürzel abfragen */
-    char c;
-    while ((c = poptGetNextOpt(optCon)) >= 0)
-    {
+    int rc;
+    while ((rc = poptGetNextOpt(optCon)) >= 0) {
 	}
 
-    /* Prüfen, ob ein Fehler bei der Bearbeitung der Optionen aufgetreten ist. */
-    if( c < -1 )
-    {
-        printf ("\"%s\" %s\n", poptBadOption( optCon, POPT_BADOPTION_NOALIAS ), poptStrerror(c) );
+    /* Prüfen, ob ein Fehler bei der Bearbeitung der Optionen aufgetreten ist. (-1 ist ok!) */
+    if (rc < -1) {
+        printf("\"%s\" %s\n", poptBadOption(optCon, POPT_BADOPTION_NOALIAS ), poptStrerror(rc));
         return 1;
     }
 
-    poptFreeContext( optCon );
+    poptFreeContext(optCon);
 
     if (cmdline_version)
     {
