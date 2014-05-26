@@ -238,7 +238,7 @@ int main (int argc, char *argv[])
         { "demod", '\0', POPT_ARG_NONE, &cmdline_demod, 0,
                 "Demodulator" },
         { "demodmode", '\0', POPT_ARG_STRING, &cmdline_demodmode, 0,
-                "Demodulator-Modus (LSB, USB, AM)" },
+                "Demodulator-Modus (LSB, USB, AM, FM, WBFM)" },
         { "offset", '\0', POPT_ARG_NONE, &cmdline_offset, 0,
                 "Offset (mit --subtract und --multiply)" },
         { "subtract", '\0', POPT_ARG_DOUBLE, &cmdline_subtract, 0,
@@ -815,10 +815,16 @@ int main (int argc, char *argv[])
 			if (!strcmp(cmdline_demodmode, "am") || !strcmp(cmdline_demodmode, "AM")) {
 				demodMode = 2;
 			}
+			if (!strcmp(cmdline_demodmode, "fm") || !strcmp(cmdline_demodmode, "FM")) {
+				demodMode = 3;
+			}
+			if (!strcmp(cmdline_demodmode, "wbfm") || !strcmp(cmdline_demodmode, "WBFM")) {
+				demodMode = 4;
+			}
 
 			if (cmdline_write) {
 				if (demodMode == 255) {
-					printf("Kein Modus (\"LSB\", \"USB\", \"AM\") angegeben\n");
+					printf("Kein Modus (\"LSB\", \"USB\", \"AM\", \"FM\", \"WBFM\") angegeben\n");
 				}
 	        	softrock_write_demodulator_mode(fifisdr, demodMode);
 			}
@@ -830,6 +836,7 @@ int main (int argc, char *argv[])
 						case 1: modeName = "USB"; break;
 						case 2: modeName = "AM"; break;
 						case 3: modeName = "FM"; break;
+						case 4: modeName = "WBFM"; break;
 					}
 					printf("Demodulator: %s\n", modeName);
 				}
