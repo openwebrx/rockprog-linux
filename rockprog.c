@@ -28,6 +28,9 @@ struct libusb_device_handle *fifisdr;
 int cmdline_write = false;
 long cmdline_vid = 0x16C0;
 long cmdline_pid = 0x05DC;
+char *cmdline_manufacturer_string = "www.ov-lennestadt.de";
+char *cmdline_serial_string = "";
+int cmdline_list_devices = false;
 int cmdline_abpf = false;
 long cmdline_index = -1;
 double cmdline_freq = -999.0;
@@ -48,7 +51,7 @@ int cmdline_virtual_vco_factor = false;
 long cmdline_factor = -1;
 int cmdline_startup = false;
 int cmdline_version = false;
-const char rockprog_version[] = "347 06.12.2011";   // Datum als Versionsnummer
+const char rockprog_version[] = "06.08.2016";   // Datum als Versionsnummer
 int cmdline_smoothtune = false;
 long cmdline_ppm = -1;
 int cmdline_autotune = false;
@@ -102,15 +105,19 @@ void print_usb_error (int error)
 
 
 /* FiFi-SDR suchen und öffnen */
-bool such_fifi (void)
+bool such_fifi (bool listOnly)
 {
     struct libusb_device **devices;                 /* Geräteliste */
     ssize_t cnt;                                    /* Anzahl Geräte */
     ssize_t n;
     struct libusb_device *device;
     struct libusb_device_descriptor desc_device;
+    struct libusb_device_handle *handle;
     int error;
+    int iString;
+    char device_string[100];
     bool found;
+    bool stringsOk;
 
 
     /* Info über alle angeschlossenen Geräte holen */
@@ -123,35 +130,77 @@ bool such_fifi (void)
 
     /* Ist ein passendes Gerät dabei? */
     found = false;
-    for (n = 0; n < cnt; n++)
-    {
+    for (n = 0; n < cnt; n++) {
         /* Geräteinfo holen */
         device = devices[n];
-
-        /* Prüfen ob dies das passende Gerät ist */
         error = libusb_get_device_descriptor (device, &desc_device);
-        if (error != 0)
-        {
-            printf ("Kann Device Descriptor nicht lesen\n");
-            break;
-        }
-        if ((cmdline_vid == desc_device.idVendor) &&
-            (cmdline_pid == desc_device.idProduct))
-        {
-            found = true;
-            break;
-        }
-    }
+        if (error == 0) {
+            /* VID und PID müssen in jedem Fall passen */
+            if ((cmdline_vid == desc_device.idVendor) &&
+                (cmdline_pid == desc_device.idProduct)) {
 
-    /* Kann es los gehen? */
-    if (found)
-    {
-        error = libusb_open (device, &fifisdr);
-        if (error != 0)
-        {
-            print_usb_error (error);
-            printf ("libusb_open() fehlgeschlagen\n");
-            found = false;
+                /* Device öffnen um Strings lesen zu können */
+                error = libusb_open(device, &handle);
+                if (error == 0) {
+                    stringsOk = false;
+
+                    /* Manufacturer-String abfragen um FiFi-SDR von anderen Libusb-Geräten zu unterscheiden */
+                    iString = desc_device.iManufacturer;
+                    if (iString != 0) {
+                        /* Manufacturer-String enthält reine ASCII-Zeichen */
+                        error = libusb_get_string_descriptor_ascii(handle, iString, (unsigned char *)device_string, sizeof(device_string));
+                        if (error > 0) {
+                            /* Der String muß genau stimmen */
+                            if (!strcmp(device_string, cmdline_manufacturer_string)) {
+                                stringsOk = true;
+                            }
+                        }
+                    }
+
+                    /* Seriennummer lesen wenn möglich */
+                    iString = desc_device.iSerialNumber;
+                    if (iString == 0) {
+                        if (listOnly) {
+                            printf("FiFi-SDR ohne Seriennummer...\n");
+                        }
+                    }
+                    else {
+                        /* Serial-String enthält reine ASCII-Zeichen */
+                        error = libusb_get_string_descriptor_ascii(handle, iString, (unsigned char *)device_string, sizeof(device_string));
+                        if (error > 0) {
+                            if (listOnly) {
+                                printf("%s\n", device_string);
+                            }
+                        }
+                    }
+
+                    /* Wenn eine Seriennummer angegeben ist, dann diese zur Auswahl heranziehen */
+                    if (strlen(cmdline_serial_string) > 0) {
+                        if (iString == 0) {
+                            /* Device hat keine Seriennummer */
+                            printf("FiFi-SDR hat keine Seriennummer (iSerial = 0)\n");
+                            stringsOk = false;
+                        }
+                        else {
+                            /* Der vorgegebene String muß in der tatsächlichen Seriennummer enthalten sein */
+                            stringsOk = strstr(device_string, cmdline_serial_string) ? true : false;
+                        }
+                    }
+
+                    /* Device merken falls alle Angaben stimmen */
+                    if (stringsOk && !listOnly) {
+                        fifisdr = handle;
+                        found = true;
+                        break;
+                    }
+
+                    libusb_close(handle);
+                }
+                else {
+                    print_usb_error (error);
+                    printf ("libusb_open() fehlgeschlagen\n");
+                }
+            }
         }
     }
 
@@ -177,6 +226,12 @@ int main (int argc, char *argv[])
                 "Werte schreiben" },
         { "vid", '\0', POPT_ARG_LONG, &cmdline_vid, 0,
                 "USB-PID des FiFi-SDR (Vorgabe: 0x16C0)" },
+        { "manufacturer", '\0', POPT_ARG_STRING, &cmdline_manufacturer_string, 0,
+                "Manufacturer-String (Vorgabe: www.ov-lennestadt.de)" },
+        { "serial", '\0', POPT_ARG_STRING, &cmdline_serial_string, 0,
+                "Mehrere FiFi-SDRs: (Teil-)String der Seriennummer" },
+        { "list", 'l', POPT_ARG_NONE, &cmdline_list_devices, 0,
+                "Zeige Liste aller angeschlossenen FiFi-SDRs" },
         { "pid", '\0', POPT_ARG_LONG, &cmdline_pid, 0,
                 "USB-VID des FiFi-SDR (Vorgabe: 0x05DC)" },
         { "abpf", '\0', POPT_ARG_NONE, &cmdline_abpf, 0,
@@ -288,7 +343,7 @@ int main (int argc, char *argv[])
     }
 
     /* FiFi-SDR suchen und öffnen */
-    if (such_fifi())
+    if (such_fifi(cmdline_list_devices))
     {
         ok = true;
 
@@ -905,9 +960,10 @@ int main (int argc, char *argv[])
  
  		libusb_close (fifisdr);
     }
-    else
-    {
-        printf ("Kein passendes FiFi-SDR gefunden\n" );
+    else {
+        if (!cmdline_list_devices) {
+            printf ("Kein passendes FiFi-SDR gefunden\n" );
+        }
     }
 
     /* Nach dem Schreiben etwas warten, damit das FiFi-SDR Zeit hat das Flash zu beschreiben. */
