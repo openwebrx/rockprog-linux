@@ -1,0 +1,16 @@
+Source: rockprog-linux
+Maintainer: Jakob Ketterl <jakob.ketterl@gmx.de>
+Section: hamradio
+Priority: optional
+Rules-Requires-Root: no
+Standards-Version: 4.2.0
+Build-Depends: debhelper (>= 22), libusb-1.0-0-dev, libpop-dev
+Homepage: https://o28.sischa.net/fifisdr/trac
+Vcs-Git: https://github.com/openwebrx/rockprog-linux.git
+Vcs-Browser: https://github.com/openwebrx/rockprog-linux
+
+Package: rockprog
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Programming interface for FiFiSDR devices
+ Command-Line utility to control FifiSDR software defined radio devices

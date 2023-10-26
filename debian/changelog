@@ -1,0 +1,5 @@
+rockprog (1.0) UNRELEASED; urgency=low
+
+  * Ported existing rockprog code into new build system
+
+ -- Jakob Ketterl <jakob.ketterl@gmx.de>  Thu, 26 Oct 2023 15:32:00 +0000
