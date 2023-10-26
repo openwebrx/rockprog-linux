@@ -1,4 +1,4 @@
-rockprog (1.0) UNRELEASED; urgency=low
+rockprog-linux (0.1) UNRELEASED; urgency=low
 
   * Ported existing rockprog code into new build system
 
